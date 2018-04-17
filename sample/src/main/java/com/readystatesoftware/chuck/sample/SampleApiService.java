@@ -49,7 +49,7 @@ class SampleApiService {
 
     interface HttpbinApi {
         @GET("/get")
-        Call<Void> get();
+        Call<Void> get(@Header("some") String header);
         @POST("/post")
         Call<Void> post(@Body Data body);
         @PATCH("/patch")

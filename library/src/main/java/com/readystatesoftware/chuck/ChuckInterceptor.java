@@ -23,11 +23,13 @@ import android.util.Log;
 import com.readystatesoftware.chuck.internal.data.ChuckContentProvider;
 import com.readystatesoftware.chuck.internal.data.HttpTransaction;
 import com.readystatesoftware.chuck.internal.data.LocalCupboard;
+import com.readystatesoftware.chuck.internal.room.RoomUtils;
 import com.readystatesoftware.chuck.internal.support.NotificationHelper;
 import com.readystatesoftware.chuck.internal.support.RetentionManager;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Date;
@@ -112,7 +114,7 @@ public final class ChuckInterceptor implements Interceptor {
         this.maxContentLength = max;
         return this;
     }
-  
+
     /**
      * Set the retention period for HTTP transaction data captured by this interceptor.
      * The default is one week.
@@ -125,14 +127,15 @@ public final class ChuckInterceptor implements Interceptor {
         return this;
     }
 
-    @Override public Response intercept(Chain chain) throws IOException {
+    @Override
+    public Response intercept(Chain chain) throws IOException {
         Request request = chain.request();
 
         RequestBody requestBody = request.body();
         boolean hasRequestBody = requestBody != null;
 
         HttpTransaction transaction = new HttpTransaction();
-        transaction.setRequestDate(new Date());
+        transaction.setRequestDate(System.currentTimeMillis());
 
         transaction.setMethod(request.method());
         transaction.setUrl(request.url().toString());
@@ -157,8 +160,31 @@ public final class ChuckInterceptor implements Interceptor {
             if (contentType != null) {
                 charset = contentType.charset(UTF8);
             }
-            if (isPlaintext(buffer)) {
-                transaction.setRequestBody(readFromBuffer(buffer, charset));
+            if (isPlaintext(requestBody.contentType())) {
+                String string = readFromBuffer(buffer, charset);
+                String s = transaction.getUrl() + "?" + string;
+                String fullUrl = s + "\n        ---------------------------------\n";
+                String[] split = string.split("&");
+                StringBuilder sb = new StringBuilder(fullUrl);
+                for (int i = 0; i < split.length; i++) {
+                    String[] param = split[i].split("=");
+                    if (param.length > 0) {
+                        sb.append(param[0]).append("=");
+                    }
+                    if (param.length > 1) {
+//                        String decode = URLDecoder.decode(param[1], "utf-8");
+//                        String para = "";
+//                        try {
+//                            para = Des3.decode(decode);
+//                        } catch (Exception e) {
+//                            para = decode;
+//                        }
+                        sb.append(param[1]).append("&");
+                    } else {
+                        sb.append("null").append("&");
+                    }
+                }
+                transaction.setRequestBody(sb.toString());
             } else {
                 transaction.setResponseBodyIsPlainText(false);
             }
@@ -180,7 +206,7 @@ public final class ChuckInterceptor implements Interceptor {
         ResponseBody responseBody = response.body();
 
         transaction.setRequestHeaders(response.request().headers()); // includes headers added later in the chain
-        transaction.setResponseDate(new Date());
+        transaction.setResponseDate(System.currentTimeMillis());
         transaction.setTookMs(tookMs);
         transaction.setProtocol(response.protocol().toString());
         transaction.setResponseCode(response.code());
@@ -223,6 +249,7 @@ public final class ChuckInterceptor implements Interceptor {
     private Uri create(HttpTransaction transaction) {
         ContentValues values = LocalCupboard.getInstance().withEntity(HttpTransaction.class).toContentValues(transaction);
         Uri uri = context.getContentResolver().insert(ChuckContentProvider.TRANSACTION_URI, values);
+        RoomUtils.getInstance().getTransaction(context).insertAll(transaction);
         transaction.setId(Long.valueOf(uri.getLastPathSegment()));
         if (showNotification) {
             notificationHelper.show(transaction);
@@ -262,6 +289,27 @@ public final class ChuckInterceptor implements Interceptor {
         } catch (EOFException e) {
             return false; // Truncated UTF-8 sequence.
         }
+    }
+
+    /**
+     * Returns true if the body in question probably contains human readable text. Uses a small sample
+     * of code points to detect unicode control characters commonly used in binary file signatures.
+     */
+    private static boolean isPlaintext(MediaType mediaType) {
+        if (mediaType == null) return false;
+        if (mediaType.type() != null && mediaType.type().equals("text")) {
+            return true;
+        }
+        String subtype = mediaType.subtype();
+        if (subtype != null) {
+            subtype = subtype.toLowerCase();
+            if (subtype.contains("x-www-form-urlencoded") ||
+                    subtype.contains("json") ||
+                    subtype.contains("xml") ||
+                    subtype.contains("html")) //
+                return true;
+        }
+        return false;
     }
 
     private boolean bodyHasUnsupportedEncoding(Headers headers) {

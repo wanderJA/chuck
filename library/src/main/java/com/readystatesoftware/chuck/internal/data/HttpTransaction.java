@@ -15,21 +15,23 @@
  */
 package com.readystatesoftware.chuck.internal.data;
 
+import android.arch.persistence.room.ColumnInfo;
+import android.arch.persistence.room.Entity;
+import android.arch.persistence.room.Ignore;
+import android.arch.persistence.room.PrimaryKey;
 import android.net.Uri;
 
 import com.google.gson.reflect.TypeToken;
 import com.readystatesoftware.chuck.internal.support.FormatUtils;
 import com.readystatesoftware.chuck.internal.support.JsonConvertor;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import nl.qbusict.cupboard.annotation.Index;
 import okhttp3.Headers;
 
+@Entity
 public class HttpTransaction {
 
     public enum Status {
@@ -38,7 +40,8 @@ public class HttpTransaction {
         Failed
     }
 
-    public static final String[] PARTIAL_PROJECTION = new String[] {
+    @Ignore
+    public static final String[] PARTIAL_PROJECTION = new String[]{
             "_id",
             "requestDate",
             "tookMs",
@@ -51,36 +54,56 @@ public class HttpTransaction {
             "error",
             "responseContentLength"
     };
-
-    private static final SimpleDateFormat TIME_ONLY_FMT = new SimpleDateFormat("HH:mm:ss", Locale.US);
-
+    @PrimaryKey
     private Long _id;
-    @Index private Date requestDate;
-    private Date responseDate;
+    @ColumnInfo
+    @Index
+    private long requestDate;
+    @ColumnInfo
+    private long responseDate;
+    @ColumnInfo
     private Long tookMs;
 
+    @ColumnInfo
     private String protocol;
+    @ColumnInfo
     private String method;
+    @ColumnInfo
     private String url;
+    @ColumnInfo
     private String host;
+    @ColumnInfo
     private String path;
+    @ColumnInfo
     private String scheme;
 
+    @ColumnInfo
     private Long requestContentLength;
+    @ColumnInfo
     private String requestContentType;
+    @ColumnInfo
     private String requestHeaders;
+    @ColumnInfo
     private String requestBody;
-    private boolean requestBodyIsPlainText = true;
+    @ColumnInfo
+    private int requestBodyIsPlainText = 1;
 
+    @ColumnInfo
     private Integer responseCode;
+    @ColumnInfo
     private String responseMessage;
+    @ColumnInfo
     private String error;
-
+    @ColumnInfo
     private Long responseContentLength;
+    @ColumnInfo
     private String responseContentType;
+    @ColumnInfo
     private String responseHeaders;
+    @ColumnInfo
     private String responseBody;
-    private boolean responseBodyIsPlainText = true;
+    @ColumnInfo
+    private int responseBodyIsPlainText = 1;
 
     public Long getId() {
         return _id;
@@ -90,19 +113,19 @@ public class HttpTransaction {
         _id = id;
     }
 
-    public Date getRequestDate() {
+    public long getRequestDate() {
         return requestDate;
     }
 
-    public void setRequestDate(Date requestDate) {
+    public void setRequestDate(long requestDate) {
         this.requestDate = requestDate;
     }
 
-    public Date getResponseDate() {
+    public long getResponseDate() {
         return responseDate;
     }
 
-    public void setResponseDate(Date responseDate) {
+    public void setResponseDate(long responseDate) {
         this.responseDate = responseDate;
     }
 
@@ -143,11 +166,11 @@ public class HttpTransaction {
     }
 
     public boolean requestBodyIsPlainText() {
-        return requestBodyIsPlainText;
+        return requestBodyIsPlainText == 1;
     }
 
     public void setRequestBodyIsPlainText(boolean requestBodyIsPlainText) {
-        this.requestBodyIsPlainText = requestBodyIsPlainText;
+        this.requestBodyIsPlainText = requestBodyIsPlainText ? 1 : 0;
     }
 
     public Long getRequestContentLength() {
@@ -179,10 +202,18 @@ public class HttpTransaction {
     }
 
     public boolean responseBodyIsPlainText() {
-        return responseBodyIsPlainText;
+        return responseBodyIsPlainText == 1;
     }
 
     public void setResponseBodyIsPlainText(boolean responseBodyIsPlainText) {
+        this.responseBodyIsPlainText = responseBodyIsPlainText ? 1 : 0;
+    }
+
+    public int getResponseBodyIsPlainText() {
+        return responseBodyIsPlainText;
+    }
+
+    public void setResponseBodyIsPlainText(int responseBodyIsPlainText) {
         this.responseBodyIsPlainText = responseBodyIsPlainText;
     }
 
@@ -251,20 +282,17 @@ public class HttpTransaction {
     }
 
     public void setRequestHeaders(Headers headers) {
-        setRequestHeaders(toHttpHeaderList(headers));
+        requestHeaders = JsonConvertor.getInstance().toJson(toHttpHeaderList(headers));
     }
 
-    public void setRequestHeaders(List<HttpHeader> headers) {
-        requestHeaders = JsonConvertor.getInstance().toJson(headers);
-    }
-
-    public List<HttpHeader> getRequestHeaders() {
+    public List<HttpHeader> getRequestHeadersList() {
         return JsonConvertor.getInstance().fromJson(requestHeaders,
-                new TypeToken<List<HttpHeader>>(){}.getType());
+                new TypeToken<List<HttpHeader>>() {
+                }.getType());
     }
 
     public String getRequestHeadersString(boolean withMarkup) {
-        return FormatUtils.formatHeaders(getRequestHeaders(), withMarkup);
+        return FormatUtils.formatHeaders(getRequestHeadersList(), withMarkup);
     }
 
     public void setResponseHeaders(Headers headers) {
@@ -275,13 +303,30 @@ public class HttpTransaction {
         responseHeaders = JsonConvertor.getInstance().toJson(headers);
     }
 
-    public List<HttpHeader> getResponseHeaders() {
+    public String getRequestHeaders() {
+        return requestHeaders;
+    }
+
+    public int getRequestBodyIsPlainText() {
+        return requestBodyIsPlainText;
+    }
+
+    public void setRequestBodyIsPlainText(int requestBodyIsPlainText) {
+        this.requestBodyIsPlainText = requestBodyIsPlainText;
+    }
+
+    public String getResponseHeaders() {
+        return responseHeaders;
+    }
+
+    public List<HttpHeader> getResponseHeadersList() {
         return JsonConvertor.getInstance().fromJson(responseHeaders,
-                new TypeToken<List<HttpHeader>>(){}.getType());
+                new TypeToken<List<HttpHeader>>() {
+                }.getType());
     }
 
     public String getResponseHeadersString(boolean withMarkup) {
-        return FormatUtils.formatHeaders(getResponseHeaders(), withMarkup);
+        return FormatUtils.formatHeaders(getResponseHeadersList(), withMarkup);
     }
 
     public Status getStatus() {
@@ -295,24 +340,25 @@ public class HttpTransaction {
     }
 
     public String getRequestStartTimeString() {
-        return (requestDate != null) ? TIME_ONLY_FMT.format(requestDate) : null;
+        return FormatUtils.formatTimeDate(requestDate);
     }
 
     public String getRequestDateString() {
-        return (requestDate != null) ? requestDate.toString() : null;
+        return FormatUtils.formatDate(requestDate);
     }
 
     public String getResponseDateString() {
-        return (responseDate != null) ? responseDate.toString() : null;
+        return FormatUtils.formatDate(responseDate);
     }
 
     public String getDurationString() {
-        return (tookMs != null) ? + tookMs + " ms" : null;
+        return (tookMs != null) ? +tookMs + " ms" : null;
     }
 
     public String getRequestSizeString() {
         return formatBytes((requestContentLength != null) ? requestContentLength : 0);
     }
+
     public String getResponseSizeString() {
         return (responseContentLength != null) ? formatBytes(responseContentLength) : null;
     }
@@ -369,5 +415,33 @@ public class HttpTransaction {
 
     private String formatBytes(long bytes) {
         return FormatUtils.formatByteCount(bytes, true);
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+
+    public void setScheme(String scheme) {
+        this.scheme = scheme;
+    }
+
+    public void setRequestHeaders(String requestHeaders) {
+        this.requestHeaders = requestHeaders;
+    }
+
+    public String getRequestHeaders(String requestHeaders) {
+        return this.requestHeaders;
+    }
+
+    public int isRequestBodyIsPlainText() {
+        return requestBodyIsPlainText;
+    }
+
+    public void setResponseHeaders(String responseHeaders) {
+        this.responseHeaders = responseHeaders;
     }
 }

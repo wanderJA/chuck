@@ -28,6 +28,8 @@ import org.xml.sax.InputSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -55,7 +57,7 @@ public class FormatUtils {
         int unit = si ? 1000 : 1024;
         if (bytes < unit) return bytes + " B";
         int exp = (int) (Math.log(bytes) / Math.log(unit));
-        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp-1) + (si ? "" : "i");
+        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
         return String.format(Locale.US, "%.1f %sB", bytes / Math.pow(unit, exp), pre);
     }
 
@@ -69,6 +71,16 @@ public class FormatUtils {
         }
     }
 
+    public static String formatDate(long date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss", Locale.CHINA);
+        return dateFormat.format(new Date(date));
+    }
+
+    public static String formatTimeDate(long date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss", Locale.CHINA);
+        return dateFormat.format(new Date(date));
+    }
+
     public static String formatXml(String xml) {
         try {
             Transformer serializer = SAXTransformerFactory.newInstance().newTransformer();
@@ -77,7 +89,7 @@ public class FormatUtils {
             Source xmlSource = new SAXSource(new InputSource(new ByteArrayInputStream(xml.getBytes())));
             StreamResult res = new StreamResult(new ByteArrayOutputStream());
             serializer.transform(xmlSource, res);
-            return new String(((ByteArrayOutputStream)res.getOutputStream()).toByteArray());
+            return new String(((ByteArrayOutputStream) res.getOutputStream()).toByteArray());
         } catch (Exception e) {
             return xml;
         }
@@ -101,7 +113,7 @@ public class FormatUtils {
         text += context.getString(R.string.chuck_total_size) + ": " + v(transaction.getTotalSizeString()) + "\n";
         text += "\n";
         text += "---------- " + context.getString(R.string.chuck_request) + " ----------\n\n";
-        String headers = formatHeaders(transaction.getRequestHeaders(), false);
+        String headers = formatHeaders(transaction.getRequestHeadersList(), false);
         if (!TextUtils.isEmpty(headers)) {
             text += headers + "\n";
         }
@@ -109,7 +121,7 @@ public class FormatUtils {
                 context.getString(R.string.chuck_body_omitted);
         text += "\n\n";
         text += "---------- " + context.getString(R.string.chuck_response) + " ----------\n\n";
-        headers = formatHeaders(transaction.getResponseHeaders(), false);
+        headers = formatHeaders(transaction.getResponseHeadersList(), false);
         if (!TextUtils.isEmpty(headers)) {
             text += headers + "\n";
         }
@@ -122,7 +134,7 @@ public class FormatUtils {
         boolean compressed = false;
         String curlCmd = "curl";
         curlCmd += " -X " + transaction.getMethod();
-        List<HttpHeader> headers = transaction.getRequestHeaders();
+        List<HttpHeader> headers = transaction.getRequestHeadersList();
         for (int i = 0, count = headers.size(); i < count; i++) {
             String name = headers.get(i).getName();
             String value = headers.get(i).getValue();

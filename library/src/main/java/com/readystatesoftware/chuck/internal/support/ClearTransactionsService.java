@@ -4,7 +4,8 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.support.annotation.Nullable;
 
-import com.readystatesoftware.chuck.internal.data.ChuckContentProvider;
+import com.readystatesoftware.chuck.internal.room.RoomUtils;
+
 
 public class ClearTransactionsService extends IntentService {
 
@@ -14,7 +15,7 @@ public class ClearTransactionsService extends IntentService {
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
-        getContentResolver().delete(ChuckContentProvider.TRANSACTION_URI, null, null);
+        RoomUtils.getInstance().getTransaction(getApplicationContext()).deleteAll();
         NotificationHelper.clearBuffer();
         NotificationHelper notificationHelper = new NotificationHelper(this);
         notificationHelper.dismiss();

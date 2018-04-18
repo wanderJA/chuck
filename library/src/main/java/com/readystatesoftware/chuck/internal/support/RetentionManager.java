@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.readystatesoftware.chuck.ChuckInterceptor;
-import com.readystatesoftware.chuck.internal.data.ChuckContentProvider;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -55,9 +54,9 @@ public class RetentionManager {
     }
 
     private void deleteSince(long threshold) {
-        int rows = context.getContentResolver().delete(ChuckContentProvider.TRANSACTION_URI,
-                "requestDate <= ?", new String[] { String.valueOf(threshold) });
-        Log.i(LOG_TAG, rows + " transactions deleted");
+//        int rows = context.getContentResolver().delete(ChuckContentProvider.TRANSACTION_URI,
+//                "requestDate <= ?", new String[] { String.valueOf(threshold) });
+//        Log.i(LOG_TAG, rows + " transactions deleted");
     }
 
     private boolean isCleanupDue(long now) {

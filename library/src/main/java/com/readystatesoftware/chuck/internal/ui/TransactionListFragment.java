@@ -17,6 +17,7 @@ package com.readystatesoftware.chuck.internal.ui;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.DividerItemDecoration;
@@ -78,10 +79,14 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
     }
 
     @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        loadDate();
+    }
+
+    @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mContext = getContext();
-        transactionDao = RoomUtils.getInstance().getTransaction(getContext());
     }
 
     @Override
@@ -93,6 +98,8 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
             throw new RuntimeException(context.toString()
                     + " must implement OnListFragmentInteractionListener");
         }
+        mContext = getContext();
+        transactionDao = RoomUtils.getInstance().getTransaction(getContext());
     }
 
     @Override

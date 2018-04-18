@@ -17,14 +17,14 @@ import java.util.List;
  */
 @Dao
 public interface TransactionDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     void insertAll(HttpTransaction... transactions);
 
 
     @Query("SELECT * FROM httptransaction ORDER BY requestDate DESC")
     List<HttpTransaction> getAll();
 
-    @Update(onConflict = OnConflictStrategy.REPLACE)
+    @Update(onConflict = OnConflictStrategy.FAIL)
     int update(HttpTransaction... httpTransaction);
 
     @Delete

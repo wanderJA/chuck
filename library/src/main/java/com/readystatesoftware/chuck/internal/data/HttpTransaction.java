@@ -54,7 +54,7 @@ public class HttpTransaction {
             "error",
             "responseContentLength"
     };
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = true)
     private Long _id;
     @ColumnInfo
     @Index

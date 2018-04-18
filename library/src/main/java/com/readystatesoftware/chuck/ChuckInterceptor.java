@@ -15,24 +15,18 @@
  */
 package com.readystatesoftware.chuck;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.net.Uri;
 import android.util.Log;
 
-import com.readystatesoftware.chuck.internal.data.ChuckContentProvider;
 import com.readystatesoftware.chuck.internal.data.HttpTransaction;
-import com.readystatesoftware.chuck.internal.data.LocalCupboard;
 import com.readystatesoftware.chuck.internal.room.RoomUtils;
 import com.readystatesoftware.chuck.internal.support.NotificationHelper;
 import com.readystatesoftware.chuck.internal.support.RetentionManager;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Headers;
@@ -190,7 +184,7 @@ public final class ChuckInterceptor implements Interceptor {
             }
         }
 
-        Uri transactionUri = create(transaction);
+        RoomUtils.getInstance().getTransaction(context).insertAll(transaction);
 
         long startNs = System.nanoTime();
         Response response;
@@ -198,7 +192,7 @@ public final class ChuckInterceptor implements Interceptor {
             response = chain.proceed(request);
         } catch (Exception e) {
             transaction.setError(e.toString());
-            update(transaction, transactionUri);
+            update(transaction);
             throw e;
         }
         long tookMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
@@ -229,7 +223,7 @@ public final class ChuckInterceptor implements Interceptor {
                 try {
                     charset = contentType.charset(UTF8);
                 } catch (UnsupportedCharsetException e) {
-                    update(transaction, transactionUri);
+                    update(transaction);
                     return response;
                 }
             }
@@ -241,26 +235,13 @@ public final class ChuckInterceptor implements Interceptor {
             transaction.setResponseContentLength(buffer.size());
         }
 
-        update(transaction, transactionUri);
+        update(transaction);
 
         return response;
     }
 
-    private Uri create(HttpTransaction transaction) {
-        ContentValues values = LocalCupboard.getInstance().withEntity(HttpTransaction.class).toContentValues(transaction);
-        Uri uri = context.getContentResolver().insert(ChuckContentProvider.TRANSACTION_URI, values);
-        RoomUtils.getInstance().getTransaction(context).insertAll(transaction);
-        transaction.setId(Long.valueOf(uri.getLastPathSegment()));
-        if (showNotification) {
-            notificationHelper.show(transaction);
-        }
-        retentionManager.doMaintenance();
-        return uri;
-    }
-
-    private int update(HttpTransaction transaction, Uri uri) {
-        ContentValues values = LocalCupboard.getInstance().withEntity(HttpTransaction.class).toContentValues(transaction);
-        int updated = context.getContentResolver().update(uri, values, null, null);
+    private int update(HttpTransaction transaction) {
+        int updated = RoomUtils.getInstance().getTransaction(context).update(transaction);
         if (showNotification && updated > 0) {
             notificationHelper.show(transaction);
         }

@@ -16,13 +16,9 @@
 package com.readystatesoftware.chuck.internal.ui;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.CursorLoader;
-import android.support.v4.content.Loader;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -36,19 +32,24 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.readystatesoftware.chuck.R;
-import com.readystatesoftware.chuck.internal.data.ChuckContentProvider;
 import com.readystatesoftware.chuck.internal.data.HttpTransaction;
+import com.readystatesoftware.chuck.internal.room.RoomUtils;
+import com.readystatesoftware.chuck.internal.room.TransactionDao;
 import com.readystatesoftware.chuck.internal.support.NotificationHelper;
 import com.readystatesoftware.chuck.internal.support.SQLiteUtils;
 
-public class TransactionListFragment extends Fragment implements
-        SearchView.OnQueryTextListener, LoaderManager.LoaderCallbacks<Cursor> {
+import java.util.List;
+
+public class TransactionListFragment extends Fragment implements SearchView.OnQueryTextListener {
 
     private String currentFilter;
     private OnListFragmentInteractionListener listener;
     private TransactionAdapter adapter;
+    private Context mContext;
+    private TransactionDao transactionDao;
 
-    public TransactionListFragment() {}
+    public TransactionListFragment() {
+    }
 
     public static TransactionListFragment newInstance() {
         return new TransactionListFragment();
@@ -79,7 +80,8 @@ public class TransactionListFragment extends Fragment implements
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        getLoaderManager().initLoader(0, null, this);
+        mContext = getContext();
+        transactionDao = RoomUtils.getInstance().getTransaction(getContext());
     }
 
     @Override
@@ -112,7 +114,7 @@ public class TransactionListFragment extends Fragment implements
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.clear) {
-            getContext().getContentResolver().delete(ChuckContentProvider.TRANSACTION_URI, null, null);
+            transactionDao.deleteAll();
             NotificationHelper.clearBuffer();
             return true;
         } else if (item.getItemId() == R.id.browse_sql) {
@@ -123,32 +125,17 @@ public class TransactionListFragment extends Fragment implements
         }
     }
 
-    @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        CursorLoader loader = new CursorLoader(getContext());
-        loader.setUri(ChuckContentProvider.TRANSACTION_URI);
+    private void loadDate() {
+        List<HttpTransaction> list;
         if (!TextUtils.isEmpty(currentFilter)) {
             if (TextUtils.isDigitsOnly(currentFilter)) {
-                loader.setSelection("responseCode LIKE ?");
-                loader.setSelectionArgs(new String[]{ currentFilter + "%" });
+                list = transactionDao.findResponse(currentFilter);
             } else {
-                loader.setSelection("path LIKE ?");
-                loader.setSelectionArgs(new String[]{ "%" + currentFilter + "%" });
+                list = transactionDao.findResponse("%" + currentFilter + "%");
             }
         }
-        loader.setProjection(HttpTransaction.PARTIAL_PROJECTION);
-        loader.setSortOrder("requestDate DESC");
-        return loader;
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        adapter.swapCursor(data);
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-        adapter.swapCursor(null);
+        list = transactionDao.getAll();
+        adapter.setDate(list);
     }
 
     @Override
@@ -159,7 +146,7 @@ public class TransactionListFragment extends Fragment implements
     @Override
     public boolean onQueryTextChange(String newText) {
         currentFilter = newText;
-        getLoaderManager().restartLoader(0, null, this);
+        loadDate();
         return true;
     }
 

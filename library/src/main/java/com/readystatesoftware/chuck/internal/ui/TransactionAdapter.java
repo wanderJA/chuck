@@ -31,6 +31,8 @@ import com.readystatesoftware.chuck.internal.data.HttpTransaction;
 import com.readystatesoftware.chuck.internal.data.LocalCupboard;
 import com.readystatesoftware.chuck.internal.ui.TransactionListFragment.OnListFragmentInteractionListener;
 
+import java.util.List;
+
 class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHolder> {
 
     private final Context context;
@@ -43,6 +45,7 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
     private final int color500;
     private final int color400;
     private final int color300;
+    private List<HttpTransaction> date;
 
     TransactionAdapter(Context context, OnListFragmentInteractionListener listener) {
         this.listener = listener;
@@ -118,7 +121,7 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
 
     @Override
     public int getItemCount() {
-        return cursorAdapter.getCount();
+        return date == null ? 0 : date.size();
     }
 
     @Override
@@ -133,9 +136,8 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
         return new ViewHolder(v);
     }
 
-    void swapCursor(Cursor newCursor) {
-        cursorAdapter.swapCursor(newCursor);
-        notifyDataSetChanged();
+    public void setDate(List<HttpTransaction> date) {
+        this.date = date;
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -152,13 +154,13 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
         ViewHolder(View view) {
             super(view);
             this.view = view;
-            code = (TextView) view.findViewById(R.id.code);
-            path = (TextView) view.findViewById(R.id.path);
-            host = (TextView) view.findViewById(R.id.host);
-            start = (TextView) view.findViewById(R.id.start);
-            duration = (TextView) view.findViewById(R.id.duration);
-            size = (TextView) view.findViewById(R.id.size);
-            ssl = (ImageView) view.findViewById(R.id.ssl);
+            code = view.findViewById(R.id.code);
+            path = view.findViewById(R.id.path);
+            host = view.findViewById(R.id.host);
+            start = view.findViewById(R.id.start);
+            duration = view.findViewById(R.id.duration);
+            size = view.findViewById(R.id.size);
+            ssl = view.findViewById(R.id.ssl);
         }
     }
 }

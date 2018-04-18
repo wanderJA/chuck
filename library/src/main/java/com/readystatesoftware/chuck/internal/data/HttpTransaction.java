@@ -39,25 +39,9 @@ public class HttpTransaction {
         Complete,
         Failed
     }
-
-    @Ignore
-    public static final String[] PARTIAL_PROJECTION = new String[]{
-            "_id",
-            "requestDate",
-            "tookMs",
-            "method",
-            "host",
-            "path",
-            "scheme",
-            "requestContentLength",
-            "responseCode",
-            "error",
-            "responseContentLength"
-    };
     @PrimaryKey(autoGenerate = true)
     private Long _id;
     @ColumnInfo
-    @Index
     private long requestDate;
     @ColumnInfo
     private long responseDate;

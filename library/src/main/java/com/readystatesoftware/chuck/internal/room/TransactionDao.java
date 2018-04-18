@@ -24,8 +24,8 @@ public interface TransactionDao {
     @Query("SELECT * FROM httptransaction ORDER BY requestDate DESC")
     List<HttpTransaction> getAll();
 
-    @Update(onConflict = OnConflictStrategy.FAIL)
-    int update(HttpTransaction... httpTransaction);
+    @Update(onConflict = OnConflictStrategy.REPLACE)
+    int update(HttpTransaction httpTransaction);
 
     @Delete
     void delete(HttpTransaction... httpTransactions);

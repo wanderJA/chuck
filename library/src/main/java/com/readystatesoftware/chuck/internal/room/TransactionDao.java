@@ -29,6 +29,9 @@ public interface TransactionDao {
     @Query("SELECT * FROM HTTPTRANSACTION ORDER BY requestDate DESC LIMIT:pageSize OFFSET:startId")
     List<HttpTransaction> getPage(int startId, int pageSize);
 
+    @Query("select COUNT(1) FROM HTTPTRANSACTION")
+    int getCount();
+
     @Update(onConflict = OnConflictStrategy.REPLACE)
     int update(HttpTransaction httpTransaction);
 

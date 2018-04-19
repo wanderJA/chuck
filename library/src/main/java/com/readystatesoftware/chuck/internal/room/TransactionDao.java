@@ -18,11 +18,16 @@ import java.util.List;
 @Dao
 public interface TransactionDao {
     @Insert
-    void insertAll(HttpTransaction... transactions);
+    long insert(HttpTransaction transactions);
 
+    @Insert
+    long[] insertAll(HttpTransaction... transactions);
 
     @Query("SELECT * FROM httptransaction ORDER BY requestDate DESC")
     List<HttpTransaction> getAll();
+
+    @Query("SELECT * FROM HTTPTRANSACTION ORDER BY requestDate DESC LIMIT:pageSize OFFSET:startId")
+    List<HttpTransaction> getPage(int startId, int pageSize);
 
     @Update(onConflict = OnConflictStrategy.REPLACE)
     int update(HttpTransaction httpTransaction);
@@ -30,10 +35,10 @@ public interface TransactionDao {
     @Delete
     void delete(HttpTransaction... httpTransactions);
 
-    @Query("SELECT * FROM HTTPTRANSACTION WHERE responseCode LIKE:word+'%'")
+    @Query("SELECT * FROM HTTPTRANSACTION WHERE responseCode LIKE:word+'%' ORDER BY requestDate DESC LIMIT 2000")
     List<HttpTransaction> findResponse(String word);
 
-    @Query("SELECT * FROM HTTPTRANSACTION WHERE path LIKE:word")
+    @Query("SELECT * FROM HTTPTRANSACTION WHERE path LIKE:word ORDER BY requestDate DESC LIMIT 2000")
     List<HttpTransaction> findPath(String word);
 
     @Query("SELECT * FROM HTTPTRANSACTION WHERE _id = :transactionId")
@@ -41,4 +46,5 @@ public interface TransactionDao {
 
     @Query("DELETE FROM HTTPTRANSACTION")
     void deleteAll();
+
 }

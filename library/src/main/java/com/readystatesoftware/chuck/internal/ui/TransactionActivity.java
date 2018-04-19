@@ -26,6 +26,7 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -34,8 +35,14 @@ import android.widget.TextView;
 import com.readystatesoftware.chuck.R;
 import com.readystatesoftware.chuck.internal.data.HttpTransaction;
 import com.readystatesoftware.chuck.internal.room.RoomUtils;
+import com.readystatesoftware.chuck.internal.room.TransactionDao;
 import com.readystatesoftware.chuck.internal.support.FormatUtils;
 import com.readystatesoftware.chuck.internal.support.SimpleOnPageChangedListener;
+import com.readystatesoftware.chuck.internal.support.ThreadUtils;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +55,7 @@ public class TransactionActivity extends BaseChuckActivity {
     private static final String ARG_TRANSACTION_ID = "transaction_id";
 
     private static int selectedTabPosition = 0;
+    private TransactionDao transactionDao;
 
     public static void start(Context context, long transactionId) {
         Intent intent = new Intent(context, TransactionActivity.class);
@@ -65,7 +73,10 @@ public class TransactionActivity extends BaseChuckActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.chuck_activity_transaction);
-
+        if (!EventBus.getDefault().isRegistered(this)) {
+            EventBus.getDefault().register(this);
+        }
+        transactionDao = RoomUtils.getInstance().getTransaction(this);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         title = findViewById(R.id.toolbar_title);
@@ -82,17 +93,35 @@ public class TransactionActivity extends BaseChuckActivity {
         tabLayout.setupWithViewPager(viewPager);
 
         transactionId = getIntent().getLongExtra(ARG_TRANSACTION_ID, 0);
-        transaction = RoomUtils.getInstance().getTransaction(this).findById(transactionId);
-        populateUI();
+        ThreadUtils.getSingleDB().execute(new Runnable() {
+            @Override
+            public void run() {
+                transaction = transactionDao.findById(transactionId);
+                ThreadUtils.runOnUIThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        populateUI();
+                    }
+                });
+            }
+        });
+
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (transactionId != 0) {
-            transaction = RoomUtils.getInstance().getTransaction(this).findById(transactionId);
+    protected void onDestroy() {
+        super.onDestroy();
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void updateItem(HttpTransaction httpTransaction) {
+        if (httpTransaction != null && httpTransaction.getId() == transactionId) {
+            transaction.copy(httpTransaction);
+            populateUI();
         }
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

@@ -23,6 +23,7 @@ import android.view.View;
 
 import com.readystatesoftware.chuck.Chuck;
 import com.readystatesoftware.chuck.ChuckInterceptor;
+import com.readystatesoftware.chuck.internal.support.ThreadUtils;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        ThreadUtils.onCreate(this);
         setContentView(R.layout.activity_main);
         findViewById(R.id.do_http).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -54,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
         return new OkHttpClient.Builder()
                 // Add a ChuckInterceptor instance to your OkHttp client
                 .addInterceptor(new ChuckInterceptor(context))
-                .addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.NONE))
+                .addInterceptor(new HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BASIC))
                 .build();
     }
 

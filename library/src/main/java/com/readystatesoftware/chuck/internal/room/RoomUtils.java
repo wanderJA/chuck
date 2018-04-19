@@ -35,7 +35,7 @@ public class RoomUtils {
         if (database == null) {
             database = Room.databaseBuilder(context, HttpDatabase.class, "chuck")
                     .addMigrations()
-                    .allowMainThreadQueries()
+//                    .allowMainThreadQueries()
                     .build();
         }
         return database;

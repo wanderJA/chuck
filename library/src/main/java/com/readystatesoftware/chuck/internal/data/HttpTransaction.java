@@ -17,7 +17,6 @@ package com.readystatesoftware.chuck.internal.data;
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
-import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.PrimaryKey;
 import android.net.Uri;
 
@@ -28,25 +27,26 @@ import com.readystatesoftware.chuck.internal.support.JsonConvertor;
 import java.util.ArrayList;
 import java.util.List;
 
-import nl.qbusict.cupboard.annotation.Index;
 import okhttp3.Headers;
 
 @Entity
 public class HttpTransaction {
+    public static int HTTP_TRANSACTION_UPDATE = 1000;
 
     public enum Status {
         Requested,
         Complete,
         Failed
     }
+
     @PrimaryKey(autoGenerate = true)
-    private Long _id;
+    private long _id;
     @ColumnInfo
     private long requestDate;
     @ColumnInfo
     private long responseDate;
     @ColumnInfo
-    private Long tookMs;
+    private long tookMs;
 
     @ColumnInfo
     private String protocol;
@@ -62,7 +62,7 @@ public class HttpTransaction {
     private String scheme;
 
     @ColumnInfo
-    private Long requestContentLength;
+    private long requestContentLength;
     @ColumnInfo
     private String requestContentType;
     @ColumnInfo
@@ -79,7 +79,7 @@ public class HttpTransaction {
     @ColumnInfo
     private String error;
     @ColumnInfo
-    private Long responseContentLength;
+    private long responseContentLength;
     @ColumnInfo
     private String responseContentType;
     @ColumnInfo
@@ -89,7 +89,7 @@ public class HttpTransaction {
     @ColumnInfo
     private int responseBodyIsPlainText = 1;
 
-    public Long getId() {
+    public long getId() {
         return _id;
     }
 
@@ -209,11 +209,11 @@ public class HttpTransaction {
         this.responseCode = responseCode;
     }
 
-    public Long getResponseContentLength() {
+    public long getResponseContentLength() {
         return responseContentLength;
     }
 
-    public void setResponseContentLength(Long responseContentLength) {
+    public void setResponseContentLength(long responseContentLength) {
         this.responseContentLength = responseContentLength;
     }
 
@@ -233,11 +233,11 @@ public class HttpTransaction {
         this.responseMessage = responseMessage;
     }
 
-    public Long getTookMs() {
+    public long getTookMs() {
         return tookMs;
     }
 
-    public void setTookMs(Long tookMs) {
+    public void setTookMs(long tookMs) {
         this.tookMs = tookMs;
     }
 
@@ -336,20 +336,20 @@ public class HttpTransaction {
     }
 
     public String getDurationString() {
-        return (tookMs != null) ? +tookMs + " ms" : null;
+        return tookMs + " ms";
     }
 
     public String getRequestSizeString() {
-        return formatBytes((requestContentLength != null) ? requestContentLength : 0);
+        return formatBytes(requestContentLength);
     }
 
     public String getResponseSizeString() {
-        return (responseContentLength != null) ? formatBytes(responseContentLength) : null;
+        return formatBytes(responseContentLength);
     }
 
     public String getTotalSizeString() {
-        long reqBytes = (requestContentLength != null) ? requestContentLength : 0;
-        long resBytes = (responseContentLength != null) ? responseContentLength : 0;
+        long reqBytes = requestContentLength;
+        long resBytes = responseContentLength;
         return formatBytes(reqBytes + resBytes);
     }
 
@@ -427,5 +427,35 @@ public class HttpTransaction {
 
     public void setResponseHeaders(String responseHeaders) {
         this.responseHeaders = responseHeaders;
+    }
+
+    /**
+     * 从另一个对象复制值
+     * @param des
+     */
+    public void copy(HttpTransaction des){
+        setId(des._id);
+        setError(des.error);
+        setHost(des.host);
+        setMethod(des.method);
+        setPath(des.path);
+        setProtocol(des.protocol);
+        setRequestBody(des.requestBody);
+        setRequestBodyIsPlainText(des.requestBodyIsPlainText);
+        setRequestContentLength(des.requestContentLength);
+        setRequestContentType(des.requestContentType);
+        setRequestDate(des.requestDate);
+        setRequestHeaders(des.requestHeaders);
+        setResponseBody(des.responseBody);
+        setResponseBodyIsPlainText(des.responseBodyIsPlainText);
+        setResponseCode(des.responseCode);
+        setResponseContentLength(des.responseContentLength);
+        setResponseContentType(des.responseContentType);
+        setResponseDate(des.responseDate);
+        setUrl(des.url);
+        setTookMs(des.tookMs);
+        setScheme(des.scheme);
+        setResponseMessage(des.responseMessage);
+        setResponseHeaders(des.responseHeaders);
     }
 }

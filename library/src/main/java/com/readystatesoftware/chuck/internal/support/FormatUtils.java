@@ -146,7 +146,7 @@ public class FormatUtils {
         String requestBody = transaction.getRequestBody();
         if (requestBody != null && requestBody.length() > 0) {
             // try to keep to a single line and use a subshell to preserve any line breaks
-            curlCmd += " --data $'" + requestBody.replace("\n", "\\n") + "'";
+            curlCmd += " --data $'" + requestBody + "\n";
         }
         curlCmd += ((compressed) ? " --compressed " : " ") + transaction.getUrl();
         return curlCmd;

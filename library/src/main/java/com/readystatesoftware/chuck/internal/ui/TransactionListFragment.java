@@ -38,6 +38,11 @@ import com.readystatesoftware.chuck.internal.room.RoomUtils;
 import com.readystatesoftware.chuck.internal.room.TransactionDao;
 import com.readystatesoftware.chuck.internal.support.NotificationHelper;
 import com.readystatesoftware.chuck.internal.support.SQLiteUtils;
+import com.readystatesoftware.chuck.internal.support.ThreadUtils;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.List;
 
@@ -48,6 +53,11 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
     private TransactionAdapter adapter;
     private Context mContext;
     private TransactionDao transactionDao;
+    private RecyclerView mRecyclerView;
+    private boolean loading;
+    private LinearLayoutManager layoutManager;
+    private int pageNum;
+    private int pageSize = 500;
 
     public TransactionListFragment() {
     }
@@ -68,12 +78,34 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
         View view = inflater.inflate(R.layout.chuck_fragment_transaction_list, container, false);
         if (view instanceof RecyclerView) {
             Context context = view.getContext();
-            RecyclerView recyclerView = (RecyclerView) view;
-            recyclerView.setLayoutManager(new LinearLayoutManager(context));
-            recyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
-                    DividerItemDecoration.VERTICAL));
+            mRecyclerView = (RecyclerView) view;
+            layoutManager = new LinearLayoutManager(context);
+            mRecyclerView.setLayoutManager(layoutManager);
+            mRecyclerView.addItemDecoration(new DividerItemDecoration(mContext, DividerItemDecoration.VERTICAL));
+            mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                    super.onScrollStateChanged(recyclerView, newState);
+                }
+
+                @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                    super.onScrolled(recyclerView, dx, dy);
+                    if (!loading) {
+                        int itemCount = layoutManager.getItemCount();
+                        if (itemCount < pageSize) {
+                            return;
+                        }
+                        int lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition();
+                        if (lastVisibleItemPosition > itemCount - 50) {
+                            pageNum++;
+                            loadDate(true);
+                        }
+                    }
+                }
+            });
             adapter = new TransactionAdapter(getContext(), listener);
-            recyclerView.setAdapter(adapter);
+            mRecyclerView.setAdapter(adapter);
         }
         return view;
     }
@@ -81,7 +113,7 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        loadDate();
+        loadDate(false);
     }
 
     @Override
@@ -98,14 +130,18 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
             throw new RuntimeException(context.toString()
                     + " must implement OnListFragmentInteractionListener");
         }
-        mContext = getContext();
+        mContext = context;
         transactionDao = RoomUtils.getInstance().getTransaction(getContext());
+        if (!EventBus.getDefault().isRegistered(this)) {
+            EventBus.getDefault().register(this);
+        }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
         listener = null;
+        EventBus.getDefault().unregister(this);
     }
 
     @Override
@@ -121,7 +157,13 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.clear) {
-            transactionDao.deleteAll();
+            ThreadUtils.getSingleDB().execute(new Runnable() {
+                @Override
+                public void run() {
+                    transactionDao.deleteAll();
+                }
+            });
+            adapter.clear();
             NotificationHelper.clearBuffer();
             return true;
         } else if (item.getItemId() == R.id.browse_sql) {
@@ -132,17 +174,56 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
         }
     }
 
-    private void loadDate() {
-        List<HttpTransaction> list;
-        if (!TextUtils.isEmpty(currentFilter)) {
-            if (TextUtils.isDigitsOnly(currentFilter)) {
-                list = transactionDao.findResponse(currentFilter);
-            } else {
-                list = transactionDao.findResponse("%" + currentFilter + "%");
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void updateItem(HttpTransaction httpTransaction) {
+        if (httpTransaction != null) {
+            int i = 0;
+            for (HttpTransaction transaction : adapter.getData()) {
+                if (transaction.getId() == httpTransaction.getId()) {
+                    transaction.copy(httpTransaction);
+                    adapter.notifyItemChanged(i);
+                    return;
+                }
+                i++;
+            }
+            adapter.add(httpTransaction);
+            if (!mRecyclerView.isComputingLayout()) {
+                mRecyclerView.smoothScrollToPosition(0);
             }
         }
-        list = transactionDao.getAll();
-        adapter.setDate(list);
+    }
+
+    private void loadDate(final boolean isLoadMore) {
+        loading = true;
+        ThreadUtils.getSingleDB().execute(new Runnable() {
+            @Override
+            public void run() {
+                final List<HttpTransaction> list;
+                if (!TextUtils.isEmpty(currentFilter)) {
+                    if (TextUtils.isDigitsOnly(currentFilter)) {
+                        //responseCode
+                        list = transactionDao.findResponse(currentFilter);
+                    } else {
+                        list = transactionDao.findPath("%" + currentFilter + "%");
+                    }
+                } else {
+                    list = transactionDao.getPage(pageNum * pageSize, pageSize);
+                }
+                ThreadUtils.runOnUIThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (isLoadMore) {
+                            adapter.addData(list);
+                        } else {
+                            adapter.setData(list);
+                        }
+                        loading = false;
+                    }
+                });
+            }
+        });
+
+
     }
 
     @Override
@@ -153,7 +234,7 @@ public class TransactionListFragment extends Fragment implements SearchView.OnQu
     @Override
     public boolean onQueryTextChange(String newText) {
         currentFilter = newText;
-        loadDate();
+        loadDate(false);
         return true;
     }
 

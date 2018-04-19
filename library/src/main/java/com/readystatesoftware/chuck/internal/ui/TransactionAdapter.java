@@ -28,6 +28,7 @@ import com.readystatesoftware.chuck.R;
 import com.readystatesoftware.chuck.internal.data.HttpTransaction;
 import com.readystatesoftware.chuck.internal.ui.TransactionListFragment.OnListFragmentInteractionListener;
 
+import java.util.ArrayList;
 import java.util.List;
 
 class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHolder> {
@@ -41,7 +42,7 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
     private final int color500;
     private final int color400;
     private final int color300;
-    private List<HttpTransaction> date;
+    private List<HttpTransaction> data = new ArrayList<>();
 
     TransactionAdapter(Context context, OnListFragmentInteractionListener listener) {
         this.listener = listener;
@@ -56,12 +57,12 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
 
     @Override
     public int getItemCount() {
-        return date == null ? 0 : date.size();
+        return data == null ? 0 : data.size();
     }
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        final HttpTransaction transaction = date.get(position);
+        final HttpTransaction transaction = data.get(position);
         holder.path.setText(transaction.getMethod() + " " + transaction.getPath());
         holder.host.setText(transaction.getHost());
         holder.start.setText(transaction.getRequestStartTimeString());
@@ -115,9 +116,33 @@ class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.ViewHol
         return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.chuck_list_item_transaction, parent, false));
     }
 
-    public void setDate(List<HttpTransaction> date) {
-        this.date = date;
+    public void setData(List<HttpTransaction> transactionList) {
+        if (transactionList != null) {
+            data.clear();
+            data.addAll(transactionList);
+            notifyDataSetChanged();
+        }
+    }
+
+    public List<HttpTransaction> getData() {
+        return data;
+    }
+
+    public void add(HttpTransaction httpTransaction) {
+        data.add(0, httpTransaction);
+        notifyItemInserted(0);
+    }
+
+    public void clear() {
+        data.clear();
         notifyDataSetChanged();
+    }
+
+    public void addData(List<HttpTransaction> list) {
+        if (list != null) {
+            data.addAll(list);
+            notifyItemRangeChanged(data.size() - list.size(), data.size());
+        }
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {

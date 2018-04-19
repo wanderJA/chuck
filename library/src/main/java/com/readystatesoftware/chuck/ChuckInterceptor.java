@@ -22,6 +22,9 @@ import com.readystatesoftware.chuck.internal.data.HttpTransaction;
 import com.readystatesoftware.chuck.internal.room.RoomUtils;
 import com.readystatesoftware.chuck.internal.support.NotificationHelper;
 import com.readystatesoftware.chuck.internal.support.RetentionManager;
+import com.readystatesoftware.chuck.internal.support.ThreadUtils;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -184,7 +187,8 @@ public final class ChuckInterceptor implements Interceptor {
             }
         }
 
-        RoomUtils.getInstance().getTransaction(context).insertAll(transaction);
+        long i = RoomUtils.getInstance().getTransaction(context).insert(transaction);
+        transaction.setId(i);
 
         long startNs = System.nanoTime();
         Response response;
@@ -242,6 +246,7 @@ public final class ChuckInterceptor implements Interceptor {
 
     private int update(HttpTransaction transaction) {
         int updated = RoomUtils.getInstance().getTransaction(context).update(transaction);
+        EventBus.getDefault().post(transaction);
         if (showNotification && updated > 0) {
             notificationHelper.show(transaction);
         }

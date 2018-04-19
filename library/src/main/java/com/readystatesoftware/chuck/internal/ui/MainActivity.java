@@ -19,9 +19,12 @@ import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 
 import com.readystatesoftware.chuck.R;
 import com.readystatesoftware.chuck.internal.data.HttpTransaction;
+import com.readystatesoftware.chuck.internal.room.RoomUtils;
+import com.readystatesoftware.chuck.internal.support.ThreadUtils;
 
 public class MainActivity extends BaseChuckActivity implements TransactionListFragment.OnListFragmentInteractionListener {
 
@@ -37,6 +40,13 @@ public class MainActivity extends BaseChuckActivity implements TransactionListFr
                     .add(R.id.container, TransactionListFragment.newInstance())
                     .commit();
         }
+        ThreadUtils.getSingleDB().execute(new Runnable() {
+            @Override
+            public void run() {
+                int count = RoomUtils.getInstance().getTransaction(MainActivity.this).getCount();
+                Log.e("chuck", "http size：" + count);
+            }
+        });
     }
 
     @Override

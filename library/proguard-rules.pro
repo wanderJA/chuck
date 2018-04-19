@@ -1,2 +1,4 @@
 -keep class com.readystatesoftware.chuck.internal.data.HttpTransaction { *; }
 -keep class android.support.v7.widget.SearchView { *; }
+-keep public class * extends android.arch.persistence.room.RoomDatabase
+-dontwarn android.arch.persistence.room.paging.**

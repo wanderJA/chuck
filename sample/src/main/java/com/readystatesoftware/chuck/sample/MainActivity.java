@@ -19,12 +19,10 @@ import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 
 import com.readystatesoftware.chuck.Chuck;
 import com.readystatesoftware.chuck.ChuckInterceptor;
-import com.readystatesoftware.chuck.internal.room.RoomUtils;
 import com.readystatesoftware.chuck.internal.support.ThreadUtils;
 
 import okhttp3.OkHttpClient;
@@ -50,13 +48,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 launchChuckDirectly();
-            }
-        });
-        ThreadUtils.getSingleDB().execute(new Runnable() {
-            @Override
-            public void run() {
-                int count = RoomUtils.getInstance().getTransaction(MainActivity.this).getCount();
-                Log.e("chuck", "http size：" + count);
             }
         });
     }
